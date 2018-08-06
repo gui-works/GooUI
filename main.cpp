@@ -6,13 +6,58 @@
 #include <iostream>
 #include <math.h>
 
+unsigned int g_window_width = 800, g_window_height = 600;
+
+double lmbx_prev = 0.0;
+double lmby_prev = 0.0;
+double lmbx_actu = 0.0;
+double lmby_actu = 0.0;
+double lmbx_pressed = 0.0;
+double lmby_pressed = 0.0;
+double lmbx = 0.0;
+double lmby = 0.0;
+double mdx = 0.0;
+double mdy = 0.0;
+
+bool apply_transform = false;
+
+static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
+{
+	if (apply_transform)
+	{
+		lmbx = xpos;
+		lmby = ypos;
+		std::cout << "x: " << lmbx << ", y: " << lmby << std::endl;
+		mdx = lmbx - lmbx_pressed;
+		mdy = lmby - lmby_pressed;
+		lmbx_actu = lmbx_prev + 2.0f * (float)mdx / (float)g_window_width;
+		lmby_actu = lmby_prev + 2.0f * (float)(-mdy) / (float)g_window_height;
+	}
+
+}
+
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+    {
+        std::cout << "PRESSED!" << std::endl;
+        glfwGetCursorPos(window, &lmbx_pressed, &lmby_pressed);
+        lmbx = lmbx_pressed;
+        lmby = lmby_pressed;
+        apply_transform = true;
+    }
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
+    {
+        std::cout << "RELEASED!" << "mdx: " << mdx << ", mdy: " << mdy << std::endl << std::endl;
+        lmbx_prev = lmbx_actu;
+        lmby_prev = lmby_actu;
+        apply_transform = false;
+    }
+
+}
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
-
-// settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
 
 
 int main()
@@ -30,7 +75,7 @@ int main()
 
     // glfw window creation
     // --------------------
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(g_window_width, g_window_height, "LearnOpenGL", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -119,11 +164,26 @@ int main()
 	int vertexColorLocation = glGetUniformLocation(colorSP.shaderProgram, "ourColor");
 	glUseProgram(colorSP.shaderProgram);
 
+	glfwSetCursorPosCallback(window, cursor_position_callback);
+	glfwSetMouseButtonCallback(window, mouse_button_callback);
+
+	int transformLocation = glGetUniformLocation(colorSP.shaderProgram, "transform");
+	glUseProgram(colorSP.shaderProgram);
+
+	double xpos = 0.0;
+	double ypos = 0.0;
+
+
+
     while (!glfwWindowShouldClose(window))
     {
         // input
         // -----
         processInput(window);
+    	glfwGetCursorPos(window, &xpos, &ypos);
+
+
+
 
         // render
         // ------
@@ -132,6 +192,7 @@ int main()
         timeValue = glfwGetTime();
 		greenValue = (sin(timeValue) / 2.0f) + 0.5f;
 		glUniform4f(vertexColorLocation, 0.0f, greenValue, 1.0f, 1.0f);
+    	glUniform2f(transformLocation, lmbx_actu, lmby_actu);
 
         // draw our first triangle
         glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
@@ -171,6 +232,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     // make sure the viewport matches the new window dimensions; note that width and
     // height will be significantly larger than specified on retina displays.
+	g_window_width = width;
+	g_window_height = height;
     glViewport(0, 0, width, height);
 }
 

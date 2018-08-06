@@ -4,8 +4,10 @@ layout (location = 1) in vec4 aCol;
 
 out vec4 vertexColor;
 
+uniform vec2 transform;
+
 void main()
 {
-    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+    gl_Position = vec4(aPos.x + transform.x, aPos.y + transform.y, aPos.z, 1.0);
     vertexColor = aCol;
 }
